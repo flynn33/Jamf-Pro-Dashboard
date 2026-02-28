@@ -4,6 +4,13 @@ Jamf Dashboard is a modular SwiftUI Jamf Pro operations app for **iOS and macOS*
 
 **Attribution:** developed by Jim Daley
 
+## Wiki Navigation
+
+- [Getting Started](docs/wiki/Getting-Started.md)
+- [Architecture](docs/wiki/Architecture.md)
+- [Module Catalog](docs/wiki/Module-Catalog.md)
+- [Operations and Troubleshooting](docs/wiki/Operations-and-Troubleshooting.md)
+
 ## 1. Project Status
 
 - `CURRENT_PROJECT_VERSION = 3`
