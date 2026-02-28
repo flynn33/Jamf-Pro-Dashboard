@@ -1,0 +1,35 @@
+name: Publish Wiki
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/wiki/**'
+      - 'WIKI.md'
+  workflow_dispatch:
+
+jobs:
+  publish-wiki:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Push wiki pages
+        # The GitHub wiki must be enabled and contain at least one page before
+        # this step can clone it. Initialize the wiki manually if needed.
+        run: |
+          git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git" wiki-repo
+          find docs/wiki -maxdepth 1 -name '*.md' -exec cp {} wiki-repo/ \;
+          if [ -f WIKI.md ]; then
+            cp WIKI.md wiki-repo/Home.md
+          fi
+          cd wiki-repo
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add .
+          git diff --staged --quiet || git commit -m "Update wiki from docs/wiki [skip ci]"
+          git push
