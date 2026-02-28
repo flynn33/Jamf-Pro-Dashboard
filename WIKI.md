@@ -9,7 +9,9 @@ Jamf Dashboard is a modular SwiftUI Jamf Pro operations app for **iOS and macOS*
 - [Getting Started](docs/wiki/Getting-Started.md)
 - [Architecture](docs/wiki/Architecture.md)
 - [Module Catalog](docs/wiki/Module-Catalog.md)
+- [API Reference](docs/wiki/API-Reference.md)
 - [Operations and Troubleshooting](docs/wiki/Operations-and-Troubleshooting.md)
+- [Contributing](docs/wiki/Contributing.md)
 
 ## 1. Project Status
 
@@ -64,6 +66,8 @@ Locations:
   - `PrestageDirector`
 - `ModulePackageTemplates`
   - example module package manifests
+- `docs/wiki`
+  - comprehensive wiki pages
 
 ## 5. Core Framework Services
 
