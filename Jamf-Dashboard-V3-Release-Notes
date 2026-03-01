@@ -1,0 +1,71 @@
+# Jamf Dashboard v3 Release Notes
+
+Jamf Dashboard is a modular SwiftUI support application for Jamf Pro operations across iOS and macOS.
+
+## Highlights
+- Modular, multi platform SwiftUI app (iOS and macOS) with shared core services
+- Centralized Jamf networking through a single `JamfAPIGateway`
+- Token issuance, caching, and refresh handled by `JamfAuthenticationService`
+- Verified credentials stored securely in Keychain
+- Built in Diagnostics Center with export support and persistent NDJSON error logging
+- Module packages supported via JSON manifests with install and remove in Settings
+
+## Built in modules
+
+### Computer Search
+Computer inventory search with reusable field profiles and endpoint or query fallback behavior for broader Jamf compatibility.
+
+### Mobile Device Search
+Mobile inventory search with reusable field profiles plus section or filter fallback handling and pre stage enrichment.
+
+### Support Technician
+Unified help desk workflow across computers and mobile devices with safety rails for sensitive actions.
+
+Includes a Manage Applications view for per device app actions such as install, update, reinstall, and remove.
+
+Destructive remove device action requires a typed Remove confirmation.
+
+### Prestage Director
+View enrollment prestage profiles and scoped devices.
+
+Supports multi select remove and move workflows with progress tracking and rollback handling.
+
+## Authentication
+Supports Jamf Pro authentication using either:
+- Jamf API Client `client_id` and `client_secret`
+- Jamf account `username` and `password`
+
+## Local data and logs
+- Credentials stored in Keychain under service `com.jamfdashboard.app`
+- Installed module packages stored in Application Support as `installed-module-packages.json`
+- Search profiles stored in Application Support as:
+  - `computer-search-profiles.json`
+  - `mobile-device-search-profiles.json`
+- Diagnostics exports stored in Documents under `JamfDashboardDiagnostics`
+- Persistent error log stored as `jamf-dashboard-errors.ndjson`
+
+## Security and distribution notes (macOS)
+The macOS target is configured for:
+- App Sandbox entitlement enabled
+- Hardened Runtime enabled
+
+## Requirements
+- Xcode 26+
+- Deployment targets: iOS 26.0+ and macOS 14.0+
+- A reachable Jamf Pro server URL
+
+## How to run from source
+1. Open `Jamf Dashboard.xcodeproj`
+2. Choose a destination (iOS simulator or device, or macOS My Mac)
+3. Build and run
+4. Go to Settings then Jamf Credentials
+5. Enter server URL and credentials, verify, then save
+6. Return to the dashboard and open a module
+
+## Known gaps for this release
+- This release is distributed as source for Xcode build and run. Packaged signed dmg and pkg builds are planned for future releases.
+- This release uses Jamf token based authentication methods and does not yet implement an IdP browser based SSO flow.
+
+## Documentation
+- `WIKI.md` contains the local guide
+- `SupportTechnicianModernAPIResearch.md` contains reference notes for the Support Technician module
