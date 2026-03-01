@@ -1,0 +1,31 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Xcode
+DerivedData/
+build/
+*.xcuserstate
+*.xcuserdata/
+*.moved-aside
+*.swp
+*.tmp
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# SwiftPM
+.build/
+Package.resolved
+
+# Logs
+*.log
+
+# Secrets / local config
+*.env
+.env.*
+*.p12
+*.mobileprovision
+*.cer
