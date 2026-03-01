@@ -6,7 +6,19 @@ Current release: `3` (`CURRENT_PROJECT_VERSION = 3`, `MARKETING_VERSION = 3`)
 
 **Attribution:** developed by Jim Daley
 
-## Requirements
+## Downloads and Distribution
+
+This project is distributed in two ways:
+
+1. **Packaged releases** (recommended for testers)
+   - Download the latest **DMG / PKG** from the **GitHub Releases** page for this repo.
+   - These are the builds intended for real testing, without requiring Xcode.
+
+2. **Build from source**
+   - If you prefer to audit or build locally, follow the steps in **Run the App** below.
+
+
+## Requirements for building
 
 - Xcode 26+
 - Deployment targets:
