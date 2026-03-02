@@ -60,6 +60,8 @@ Configured in:
   - Mobile inventory search with reusable field profiles
   - Section/filter fallback handling and pre-stage enrichment
 
+  ##THE SUPPORT TECHNICIAN MODULE IS AN ALPHA BUILD. DO NOT USE ON A PRODUCTION SERVER OR INSTANCE.  MANY OF THE FEATURES ARE NOT FULLY IMPLEMENTED AND COULD LEAD TO UNEXPECTED RESULTS.
+
 - `Support Technician`
   - Unified help-desk workflow across computer and mobile inventory
   - Device command confirmations for sensitive actions
