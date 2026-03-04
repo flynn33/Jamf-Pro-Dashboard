@@ -1,6 +1,6 @@
 # API Reference
 
-This page catalogs the Jamf Pro Modern API endpoints used by Jamf Dashboard, grouped by module. All requests are made through `JamfAPIGateway` using Bearer token authentication.
+This page catalogs the Jamf Pro Modern API endpoints used by Jamf Dashboard, grouped by module. All requests are made through `JamfAPIGateway` (conforming to `JamfAPIGatewayProviding`) using Bearer token authentication.
 
 For the authoritative Jamf Pro API reference, see the [Jamf Developer Portal](https://developer.jamf.com/jamf-pro/reference/).
 

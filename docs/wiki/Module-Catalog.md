@@ -2,14 +2,14 @@
 
 ## Module contract
 
-All modules conform to `JamfModule` and render their root view via `makeRootView(context:)`, receiving gateway, credentials, and diagnostics services through `ModuleContext`. See [Architecture](Architecture.md) for the full contract definition.
+All modules conform to `ForsettiUIModule` and declare their UI through `ViewInjectionDescriptor` targeting the `module.workspace` slot. Modules receive gateway, credentials, and diagnostics services through `ForsettiContext.services` during the `start(context:)` lifecycle call. See [Architecture](Architecture.md) for the full contract definition.
 
 ---
 
 ## Computer Search
 
-**Package type:** `computer-search`  
-**Default package ID:** `com.jamftool.modules.computer-search`  
+**Module ID:** `com.jamftool.modules.computer-search`
+**Entry Point:** `ComputerSearchModule`
 **Icon:** `desktopcomputer`
 
 ### Overview
@@ -36,8 +36,8 @@ Searches Jamf Pro computer inventory and presents results in a configurable fiel
 
 ## Mobile Device Search
 
-**Package type:** `mobile-device-search`  
-**Default package ID:** `com.jamftool.modules.mobile-device-search`  
+**Module ID:** `com.jamftool.modules.mobile-device-search`
+**Entry Point:** `MobileDeviceSearchModule`
 **Icon:** `iphone.gen3`
 
 ### Overview
@@ -64,8 +64,8 @@ Searches Jamf Pro mobile device inventory with the same profile-based field sele
 
 ## Support Technician
 
-**Package type:** `support-technician`  
-**Default package ID:** `com.jamftool.modules.support-technician`  
+**Module ID:** `com.jamftool.modules.support-technician`
+**Entry Point:** `SupportTechnicianModule`
 **Icon:** `wrench.and.screwdriver`
 
 ### Overview
@@ -155,8 +155,8 @@ Minimum privileges for full functionality:
 
 ## Prestage Director
 
-**Package type:** `prestage-director`  
-**Default package ID:** `com.jamftool.modules.prestage-director`  
+**Module ID:** `com.jamftool.modules.prestage-director`
+**Entry Point:** `PrestageDirectorModule`
 **Icon:** `arrow.left.arrow.right.square`
 
 ### Overview

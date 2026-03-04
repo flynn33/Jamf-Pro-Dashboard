@@ -1,22 +1,19 @@
+// MARK: - Forsetti Compliance
+// JamfAPIGateway conforms to the JamfAPIGatewayProviding protocol, enabling
+// registration in ForsettiServiceContainer and protocol-based resolution by modules
+// via ForsettiContext.services.resolve(JamfAPIGatewayProviding.self).
+// The actor isolation model aligns with Forsetti's Sendable service requirements.
+
 import Foundation
 
-/// HTTPMethod declaration.
-enum HTTPMethod: String, Sendable {
-    case get = "GET"
-    case post = "POST"
-    case put = "PUT"
-    case patch = "PATCH"
-    case delete = "DELETE"
-}
-
 /// JamfAPIGateway declaration.
-actor JamfAPIGateway {
+/// Conforms to JamfAPIGatewayProviding for resolution via ForsettiContext.services.
+actor JamfAPIGateway: JamfAPIGatewayProviding {
     private let credentialsStore: JamfCredentialsStore
     private let authenticationService: JamfAuthenticationService
     private let diagnosticsReporter: any DiagnosticsReporting
     private let session: URLSession
 
-    /// Initializes the instance.
     init(
         credentialsStore: JamfCredentialsStore,
         authenticationService: JamfAuthenticationService,
@@ -29,7 +26,6 @@ actor JamfAPIGateway {
         self.session = session
     }
 
-    /// Handles request.
     func request(
         path: String,
         method: HTTPMethod = .get,
@@ -100,7 +96,6 @@ actor JamfAPIGateway {
         }
     }
 
-    /// Handles currentCredentials.
     private func currentCredentials() async throws -> JamfCredentials {
         guard let credentials = try await MainActor.run(body: {
             try credentialsStore.loadCredentials()
@@ -111,7 +106,6 @@ actor JamfAPIGateway {
         return credentials
     }
 
-    /// Handles buildRequest.
     private func buildRequest(
         baseURL: URL,
         path: String,
@@ -150,7 +144,6 @@ actor JamfAPIGateway {
         return request
     }
 
-    /// Handles unwrapResponse.
     private func unwrapResponse(data: Data, statusCode: Int) throws -> Data {
         guard (200 ... 299).contains(statusCode) else {
             let message = String(data: data, encoding: .utf8) ?? "Unknown server response"
@@ -160,10 +153,7 @@ actor JamfAPIGateway {
         return data
     }
 
-    /// Handles describe.
     private func describe(_ error: any Error) -> String {
         (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
     }
 }
-
-//endofline

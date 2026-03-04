@@ -1,67 +1,67 @@
 # Architecture
 
-Jamf Dashboard is a SwiftUI iOS/macOS app built around a shared framework container. Modules stay lightweight by relying on injected services for authentication, networking, diagnostics, and persistence.
+Jamf Dashboard is a SwiftUI iOS/macOS app built on the Forsetti Framework. Modules stay lightweight by relying on protocol-based services resolved through `ForsettiContext` for authentication, networking, diagnostics, and persistence.
 
 ## Repository layout
 
 ```
 JamfDashboardApp/
-  App/                        # Entry point and framework container wiring
-  Framework/
-    Core/                     # Shared contracts, credentials model, error types, module registry
-    Networking/               # Authentication service and API gateway
-    Security/                 # Keychain-backed credential store
-    Diagnostics/              # Event reporting, NDJSON error log, JSON export
-    Modules/                  # Module manifest model, package manager, package persistence
-    UI/                       # Dashboard, settings, credentials, diagnostics views
-    Scanning/                 # Shared barcode/QR scanner sheet
+  App/                        # Entry point and Forsetti bootstrap wiring
+  Services/                   # API gateway, authentication, credentials, Forsetti logger, Keychain
+    Protocols/                # Protocol definitions for ForsettiServiceContainer registration
+  Diagnostics/                # Event reporting, NDJSON error log, JSON export
+  Models/                     # Shared credentials model, error types
   DesignSystem/               # Shared visual and theming components
+  HostUI/                     # Branded dashboard host, settings, credentials, diagnostics, about views
+    Scanning/                 # Shared barcode/QR scanner sheet
   Modules/
     ComputerSearch/           # Computer inventory search module
     MobileDeviceSearch/       # Mobile inventory search module
     SupportTechnician/        # Help-desk unified workflow module
     PrestageDirector/         # Prestage enrollment management module
-ModulePackageTemplates/       # Example module package JSON manifests
+  Resources/
+    ForsettiManifests/        # Module manifest JSON files for Forsetti discovery
 docs/wiki/                    # Wiki documentation pages
 ```
 
 ## Application shell
 
-`JamfDashboardApp.swift` creates `JamfFrameworkContainer` and passes `moduleContext` into module views.
+`JamfDashboardApp.swift` creates `JamfDashboardBootstrap` and renders `JamfDashboardHostView` as the root scene.
 
-`JamfFrameworkContainer` owns all shared services and is the single source of truth for the app's dependencies:
+`JamfDashboardBootstrap` initializes the Forsetti runtime and is the single source of truth for the app's dependencies:
 
 ```
-JamfFrameworkContainer
-  ├── DiagnosticsCenter
-  ├── JamfCredentialsStore
-  ├── JamfAPIGateway
-  │     ├── JamfCredentialsStore (ref)
-  │     ├── JamfAuthenticationService
+JamfDashboardBootstrap
+  ├── ForsettiRuntime (manifest discovery + entitlement reconciliation)
+  ├── ForsettiServiceContainer
+  │     ├── JamfAPIGateway (JamfAPIGatewayProviding)
+  │     │     ├── JamfCredentialsStore (ref)
+  │     │     ├── JamfAuthenticationService
+  │     │     │     └── DiagnosticsCenter (ref)
   │     │     └── DiagnosticsCenter (ref)
-  │     └── DiagnosticsCenter (ref)
-  ├── ModuleRegistry
-  └── ModulePackageManager
-        ├── ModuleRegistry (ref)
-        ├── DiagnosticsCenter (ref)
-        └── ModulePackageStore
+  │     ├── JamfCredentialsStore (JamfCredentialsProviding)
+  │     └── DiagnosticsCenter (DiagnosticsReporting)
+  ├── ModuleRegistry (factory-based module instantiation)
+  ├── ForsettiHostController (module lifecycle + activation state)
+  └── ForsettiViewInjectionRegistry (viewID → SwiftUI view builders)
 ```
 
 ## Service descriptions
 
-### JamfFrameworkContainer
+### JamfDashboardBootstrap
 
-`@MainActor final class` that bootstraps and vends all shared services. The convenience initializer constructs the full dependency graph. A `moduleContext` computed property packages gateway, credentials store, and diagnostics for injection into modules.
+`@MainActor final class` that initializes the Forsetti runtime and wires all application services. Creates the full dependency graph including `ForsettiRuntime`, `ForsettiServiceContainer`, `ModuleRegistry`, `ForsettiHostController`, and `ForsettiViewInjectionRegistry`. Exposes the controller, injection registry, credentials store, and diagnostics center for the host view.
 
 ### JamfAPIGateway
 
-`actor` that is the single HTTP request layer for all modules.
+`actor` conforming to `JamfAPIGatewayProviding` — the single HTTP request layer for all modules.
 
 - Loads credentials from `JamfCredentialsStore` on every call.
 - Retrieves a valid token from `JamfAuthenticationService` before building the request.
 - Automatically retries once on `401` after invalidating the cached token.
 - Normalizes all non-2xx responses to `JamfFrameworkError.networkFailure`.
 - Records every failure in `DiagnosticsCenter` with method, path, and error description.
+- Registered in `ForsettiServiceContainer` for protocol-based resolution by modules.
 
 ### JamfAuthenticationService
 
@@ -74,12 +74,13 @@ JamfFrameworkContainer
 
 ### JamfCredentialsStore
 
-`@MainActor final class` for Keychain-backed secure credential persistence.
+`@MainActor final class` conforming to `JamfCredentialsProviding` for Keychain-backed secure credential persistence.
 
 - Operations: `saveCredentials`, `loadCredentials`, `clearCredentials`.
 - Publishes `hasStoredCredentials` for UI binding.
 - Only stores credential fields for the selected auth method (`storageSanitized`); unused fields are cleared before save.
 - Delegates raw Keychain I/O to `KeychainSecureStore`.
+- Registered in `ForsettiServiceContainer` for protocol-based resolution.
 
 ### DiagnosticsCenter
 
@@ -89,68 +90,66 @@ JamfFrameworkContainer
 - Appends error-severity events to a persistent NDJSON file at `Documents/JamfDashboardDiagnostics/jamf-dashboard-errors.ndjson`.
 - Exports the full in-memory event array as a JSON bundle to `Documents/JamfDashboardDiagnostics/`.
 - Supports full clear/reset of both the in-memory stream and the NDJSON log.
+- Bridged to Forsetti runtime logging via `JamfForsettiLogger`.
 
 `DiagnosticEvent` fields: `id` (UUID), `timestamp`, `source`, `category`, `severity` (`info`/`warning`/`error`), `message`, `metadata` (string dictionary).
 
-### ModuleRegistry
+### JamfForsettiLogger
 
-Holds the registered `JamfModule` instances. `ModulePackageManager` adds and removes modules from the registry in response to package installs and removals.
+Implements Forsetti's `ForsettiLogger` protocol and forwards all runtime log messages to `DiagnosticsCenter`. Unifies framework-level events (module lifecycle, entitlement checks, boot sequence) with application-level diagnostics.
 
-### ModulePackageManager
+### ForsettiHostController
 
-Manages the full lifecycle of module packages.
+Manages module boot, activation, deactivation lifecycle. Tracks the selected module for navigation and provides `uiModules` list for dashboard rendering.
 
-- `bootstrap()` — re-applies all bundled default packages that are not currently installed.
-- `installPackage(from:)` — parses a JSON manifest, rejects duplicates and unsupported types, then registers the module.
-- `removePackage(id:)` — removes a custom package from the registry and persists the change.
-- Delegates persistence to `ModulePackageStore`.
+### ForsettiViewInjectionRegistry
 
-## Module contract
+Maps viewID strings to SwiftUI view builders. Used by `JamfDashboardHostView` to resolve module workspace views via the `module.workspace` slot.
 
-All modules conform to `JamfModule`:
+## Module contract (Forsetti)
+
+All modules conform to `ForsettiUIModule`:
 
 ```swift
-protocol JamfModule {
-    var id: String { get }
-    var title: String { get }
-    var subtitle: String { get }
-    var iconSystemName: String { get }
-    func makeRootView(context: ModuleContext) -> AnyView
+protocol ForsettiUIModule {
+    var descriptor: ModuleDescriptor { get }
+    var manifest: ModuleManifest { get }
+    var uiContributions: UIContributions { get }
+    func start(context: ForsettiContext) throws
+    func stop(context: ForsettiContext)
 }
 ```
 
-`ModuleContext` injects services:
+Modules receive services through `ForsettiContext`:
 
 ```swift
-struct ModuleContext {
-    let apiGateway: JamfAPIGateway
-    let credentialsStore: JamfCredentialsStore
-    let diagnosticsReporter: any DiagnosticsReporting
-}
+// In start(context:):
+let gateway = context.services.resolve(JamfAPIGatewayProviding.self)
+let credentials = context.services.resolve(JamfCredentialsProviding.self)
+let diagnostics = context.services.resolve(DiagnosticsReporting.self)
 ```
 
-## Module packages
+## Module manifests (Forsetti)
 
-Modules are registered through JSON manifests parsed by `ModulePackageManifest.fromPackageFileData(_:)`. The parser accepts multiple key aliases (e.g. `package_id`, `packageID`, `id`) to be permissive about manifest authoring.
+Modules are discovered via JSON manifest files in `JamfDashboardApp/Resources/ForsettiManifests/`. Each manifest declares the module identity, capabilities, platforms, and entry point class name. The Forsetti runtime reads these at boot, reconciles requested capabilities against the entitlement provider, and activates modules through registered factories in `ModuleRegistry`.
 
-| JSON field | Aliases | Required |
-|---|---|---|
-| `package_id` | `packageID`, `id` | Yes |
-| `module_type` | `moduleType` | Yes |
-| `package_version` | `packageVersion`, `version` | No (defaults to `1.0.0`) |
-| `module_display_name` | `moduleDisplayName`, `displayName`, `name` | No |
-| `module_subtitle` | `moduleSubtitle`, `subtitle`, `description` | No |
-| `icon_system_name` | `iconSystemName` | No |
-
-Resolved values (display name, subtitle, icon) fall back to module-type defaults when the manifest field is absent or blank.
-
-Persisted state: `Application Support/JamfDashboard/installed-module-packages.json` (array of `ModulePackageManifest` objects encoded by `ModulePackageStore`).
+| Manifest field | Description |
+|---|---|
+| `schemaVersion` | Manifest format version (`"1.0"`) |
+| `moduleID` | Unique reverse-domain identifier |
+| `displayName` | Human-readable name |
+| `moduleVersion` | Semantic version string |
+| `moduleType` | `"ui"` for dashboard modules |
+| `supportedPlatforms` | Array: `"iOS"`, `"macOS"` |
+| `minForsettiVersion` | Minimum framework version |
+| `capabilitiesRequested` | Array of capability strings |
+| `entryPoint` | Class name matching the `ModuleRegistry` factory key |
 
 ## Request and diagnostics flow
 
 ```
 Module
-  └─► JamfAPIGateway.request(path:method:queryItems:body:)
+  └─► JamfAPIGatewayProviding.request(path:method:queryItems:body:)
         ├─► JamfCredentialsStore.loadCredentials()
         ├─► JamfAuthenticationService.accessToken(for:)
         │     └─► POST /api/v1/oauth/token   (or /api/v1/auth/token)
@@ -173,9 +172,6 @@ Module
 | `decodingFailure` | Token or API response JSON cannot be decoded |
 | `keychainFailure(status:)` | Keychain operation returned a non-zero OSStatus |
 | `persistenceFailure(message:)` | File-system read/write error |
-| `invalidModulePackage(message:)` | Manifest is missing required fields or is malformed |
-| `duplicateModulePackage(packageID:)` | Package with this ID is already installed |
-| `unsupportedModulePackageType(type:)` | `module_type` value is not recognized |
 
 ## Security and platform
 
@@ -183,4 +179,4 @@ Module
 - Entitlements file: `JamfDashboardApp/JamfDashboardApp.entitlements`.
 - Build settings are in `Jamf Dashboard.xcodeproj/project.pbxproj`.
 - Credential storage uses the system Keychain via `KeychainSecureStore`; the service identifier is `com.jamfdashboard.app`.
-- Scanner integration is centralized in `Framework/Scanning/CodeScannerSheet.swift` to uniformly handle camera permission states and unavailable/unsupported scanner hardware.
+- Scanner integration is centralized in `HostUI/Scanning/CodeScannerSheet.swift` to uniformly handle camera permission states and unavailable/unsupported scanner hardware.

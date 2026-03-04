@@ -2,24 +2,20 @@ import Foundation
 
 /// JamfAuthenticationService declaration.
 actor JamfAuthenticationService {
-    /// CachedToken declaration.
     private struct CachedToken: Sendable {
         let value: String
         let expirationDate: Date
 
-        /// Handles isValid.
         func isValid(at referenceDate: Date = Date()) -> Bool {
             expirationDate > referenceDate.addingTimeInterval(60)
         }
     }
 
-    /// TokenResponse declaration.
     private struct TokenResponse: Decodable {
         let accessToken: String
         let expirationDate: Date
         let expiresInSeconds: Int
 
-        /// CodingKeys declaration.
         enum CodingKeys: String, CodingKey {
             case oauthAccessToken = "access_token"
             case oauthExpiresIn = "expires_in"
@@ -37,7 +33,6 @@ actor JamfAuthenticationService {
             ISO8601DateFormatter()
         }()
 
-        /// Initializes the instance.
         init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -78,7 +73,6 @@ actor JamfAuthenticationService {
             )
         }
 
-        /// Handles parseExpirationDate.
         private static func parseExpirationDate(rawValue: String) -> Date? {
             isoFormatterWithFractionalSeconds.date(from: rawValue) ??
             isoFormatter.date(from: rawValue)
@@ -90,7 +84,6 @@ actor JamfAuthenticationService {
     private var cachedToken: CachedToken?
     private var cachedCredentialSignature: String?
 
-    /// Initializes the instance.
     init(
         session: URLSession = .shared,
         diagnosticsReporter: (any DiagnosticsReporting)? = nil
@@ -99,7 +92,6 @@ actor JamfAuthenticationService {
         self.diagnosticsReporter = diagnosticsReporter
     }
 
-    /// Handles accessToken.
     func accessToken(for credentials: JamfCredentials) async throws -> String {
         let credentialSignature = signature(for: credentials)
         if cachedCredentialSignature != credentialSignature {
@@ -186,13 +178,11 @@ actor JamfAuthenticationService {
         return token.value
     }
 
-    /// Handles invalidateToken.
     func invalidateToken() {
         cachedToken = nil
         cachedCredentialSignature = nil
     }
 
-    /// Handles performTokenRequest.
     private func performTokenRequest(request: URLRequest, endpoint: URL) async throws -> Data {
         let (data, response): (Data, URLResponse)
         do {
@@ -237,7 +227,6 @@ actor JamfAuthenticationService {
         return data
     }
 
-    /// Handles decodeTokenResponse.
     private func decodeTokenResponse(data: Data) async throws -> TokenResponse {
         do {
             return try JSONDecoder().decode(TokenResponse.self, from: data)
@@ -252,7 +241,6 @@ actor JamfAuthenticationService {
         }
     }
 
-    /// Handles signature.
     private func signature(for credentials: JamfCredentials) -> String {
         switch credentials.authenticationMethod {
         case .apiClient:
@@ -272,10 +260,7 @@ actor JamfAuthenticationService {
         }
     }
 
-    /// Handles describe.
     private func describe(_ error: any Error) -> String {
         (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
     }
 }
-
-//endofline

@@ -8,24 +8,6 @@
 - If you rotate a `client_secret` or change a password, re-enter the new value, verify, and save — the token cache invalidates automatically when the credential signature changes.
 - After saving, the framework re-acquires a token on the next API call without requiring a restart.
 
-## Module packages
-
-Manage installed packages from **Settings → Module Packages**:
-
-| Action | How |
-|---|---|
-| Install | Paste or load a JSON manifest; tap Install |
-| Remove | Swipe or select a custom package and tap Remove |
-| Reset to defaults | Delete all custom packages; bundled defaults are restored on next launch |
-
-Rules enforced by `ModulePackageManager`:
-
-- `package_id` must be unique across all installed packages.
-- `module_type` must be one of: `computer-search`, `mobile-device-search`, `support-technician`, `prestage-director`.
-- Attempting to remove a bundled default package is blocked in the UI; bootstrap will restore it on next launch regardless.
-
-Persisted state: `Application Support/JamfDashboard/installed-module-packages.json`.
-
 ## Diagnostics and logging
 
 ### Viewing diagnostics in the app
@@ -37,14 +19,19 @@ Persisted state: `Application Support/JamfDashboard/installed-module-packages.js
 
 ### Diagnostics exports
 
-- Open **Settings → Diagnostics** and tap **Export** to write a timestamped JSON bundle to `Documents/JamfDashboardDiagnostics/`.
+- Open **Diagnostics** from the toolbar and tap **Export JSON** to write a timestamped JSON bundle to `Documents/JamfDashboardDiagnostics/`.
 - The in-memory event stream is bounded; export before quitting if you are actively investigating an issue.
 
 ### Persistent error log
 
 - `Documents/JamfDashboardDiagnostics/jamf-dashboard-errors.ndjson` — newline-delimited JSON, one `DiagnosticEvent` object per line.
 - The log accumulates across sessions and survives app restarts.
-- Clear it from **Settings → Diagnostics** when it is no longer needed.
+- Clear it from the Diagnostics view when it is no longer needed.
+
+### Forsetti runtime logging
+
+- `JamfForsettiLogger` bridges Forsetti's `ForsettiLogger` protocol to `DiagnosticsCenter`.
+- Framework-level events (module lifecycle, entitlement checks, boot sequence) appear in the same diagnostics stream as application-level events.
 
 ### DiagnosticEvent fields
 
@@ -63,7 +50,6 @@ Persisted state: `Application Support/JamfDashboard/installed-module-packages.js
 | Data | Location |
 |---|---|
 | Credentials | Keychain, service `com.jamfdashboard.app` |
-| Installed module packages | `Application Support/JamfDashboard/installed-module-packages.json` |
 | Computer search profiles | `Application Support/JamfDashboard/computer-search-profiles.json` |
 | Mobile device search profiles | `Application Support/JamfDashboard/mobile-device-search-profiles.json` |
 | Diagnostics exports | `Documents/JamfDashboardDiagnostics/` |
@@ -80,13 +66,12 @@ Persisted state: `Application Support/JamfDashboard/installed-module-packages.js
 | `403 INVALID_PRIVILEGE` | Jamf API role lacks required privilege | Add the missing privilege to the API role or switch to a role with broader access |
 | Token request returns `400` | `client_id`/`client_secret` incorrect | Verify the API client credentials in Jamf Pro and re-enter them |
 
-### Modules and packages
+### Modules
 
 | Symptom | Likely cause | Resolution |
 |---|---|---|
-| Module tile missing after re-install | Package removed but bootstrap not yet run | Relaunch the app to trigger bootstrap |
-| Install fails with "duplicate package" error | Package ID already exists | Use a different `package_id` in the manifest or remove the existing package first |
-| Install fails with "unsupported module type" | `module_type` value is not recognized | Use one of the four supported values: `computer-search`, `mobile-device-search`, `support-technician`, `prestage-director` |
+| No modules visible on dashboard | Forsetti runtime boot failed or manifests missing | Check diagnostics for boot events; verify manifest JSONs exist in `Resources/ForsettiManifests/` and are included in the bundle |
+| Module fails to activate | Entry point mismatch | Verify the `entryPoint` in the manifest matches the registered factory key in `JamfDashboardBootstrap` |
 
 ### Search and inventory
 
@@ -106,8 +91,8 @@ Persisted state: `Application Support/JamfDashboard/installed-module-packages.js
 ## Collecting support data
 
 1. Reproduce the issue.
-2. Open a module's **Diagnostics** view (or **Settings → Diagnostics**), enable **Error Logs**, and tap **Get Logs**.
-3. Export the diagnostics bundle from **Settings → Diagnostics → Export**.
+2. Open **Diagnostics** from the toolbar, enable **Error Logs**, and tap **Get Logs**.
+3. Export the diagnostics bundle from **Diagnostics → Export JSON**.
 4. Retrieve the NDJSON error log from `Documents/JamfDashboardDiagnostics/jamf-dashboard-errors.ndjson`.
 5. Include the exported JSON, the NDJSON log, the platform (iOS/macOS), the module name, the device type (computer/mobile), the action performed, and the timestamps when filing a report.
 

@@ -32,6 +32,16 @@ struct AboutView: View {
 
                 Divider()
 
+                VStack(alignment: .leading, spacing: BrandTheme.Spacing.compact) {
+                    Text("Built on Forsetti Framework")
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    Text("Forsetti provides sealed modular runtime composition, manifest-based module discovery, entitlement governance, and protocol-first dependency injection for native iOS and macOS applications.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Text("developed by Jim Daley")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(BrandColors.bluePrimary)

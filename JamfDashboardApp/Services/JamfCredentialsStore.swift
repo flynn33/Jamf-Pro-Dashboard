@@ -1,9 +1,16 @@
+// MARK: - Forsetti Compliance
+// JamfCredentialsStore conforms to JamfCredentialsProviding, enabling protocol-keyed
+// registration in ForsettiServiceContainer. Modules resolve credentials through
+// ForsettiContext.services.resolve(JamfCredentialsProviding.self) rather than
+// depending on the concrete class, following Forsetti's protocol-first DI pattern.
+
 import Foundation
 import Combine
 
 @MainActor
 /// JamfCredentialsStore declaration.
-final class JamfCredentialsStore: ObservableObject {
+/// Conforms to JamfCredentialsProviding for resolution via ForsettiContext.services.
+final class JamfCredentialsStore: ObservableObject, JamfCredentialsProviding {
     @Published private(set) var hasStoredCredentials = false
 
     private let secureStore: SecureDataStore
@@ -11,18 +18,15 @@ final class JamfCredentialsStore: ObservableObject {
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
-    /// Initializes the instance.
     init(secureStore: SecureDataStore) {
         self.secureStore = secureStore
         refreshState()
     }
 
-    /// Initializes the instance.
     convenience init() {
         self.init(secureStore: KeychainSecureStore())
     }
 
-    /// Handles refreshState.
     func refreshState() {
         do {
             hasStoredCredentials = try loadCredentials() != nil
@@ -31,7 +35,6 @@ final class JamfCredentialsStore: ObservableObject {
         }
     }
 
-    /// Handles loadCredentials.
     func loadCredentials() throws -> JamfCredentials? {
         guard let data = try secureStore.loadData(for: credentialsKey) else {
             return nil
@@ -40,7 +43,6 @@ final class JamfCredentialsStore: ObservableObject {
         return try decoder.decode(JamfCredentials.self, from: data)
     }
 
-    /// Handles saveCredentials.
     func saveCredentials(_ credentials: JamfCredentials) throws {
         let sanitizedCredentials = credentials.storageSanitized
         guard sanitizedCredentials.isComplete else {
@@ -52,11 +54,8 @@ final class JamfCredentialsStore: ObservableObject {
         hasStoredCredentials = true
     }
 
-    /// Handles clearCredentials.
     func clearCredentials() throws {
         try secureStore.deleteData(for: credentialsKey)
         hasStoredCredentials = false
     }
 }
-
-//endofline

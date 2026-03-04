@@ -1,35 +1,63 @@
-import SwiftUI
+// MARK: - Forsetti Compliance
+// Conforms to ForsettiUIModule with full lifecycle compliance:
+// - descriptor: declares identity and version per Forsetti ModuleDescriptor contract
+// - manifest: declares capabilities (networking, secureStorage, viewInjection) and entryPoint
+// - uiContributions: registers a ViewInjectionDescriptor for the module.workspace slot
+// - start(context:)/stop(context:): receives ForsettiContext for service resolution
+// Discovered via manifest JSON in ForsettiManifests/ and instantiated by ModuleRegistry factory.
+
+import Foundation
+import ForsettiCore
 
 /// ComputerSearchModule declaration.
-final class ComputerSearchModule: JamfModule {
-    let id: String
-    let title: String
-    let subtitle: String
-    let iconSystemName: String
+/// Forsetti-compliant UI module for searching Jamf Pro computer inventory.
+final class ComputerSearchModule: ForsettiUIModule {
+    let descriptor = ModuleDescriptor(
+        moduleID: "com.jamftool.modules.computer-search",
+        displayName: "Computer Search",
+        moduleVersion: SemVer(major: 1, minor: 0, patch: 0),
+        moduleType: .ui
+    )
 
-    /// Initializes the instance.
-    init(
-        id: String = "com.jamftool.modules.computer-search",
-        title: String = "Computer Search",
-        subtitle: String = "Search computer inventory and create reusable field-based profiles.",
-        iconSystemName: String = "desktopcomputer"
-    ) {
-        self.id = id
-        self.title = title
-        self.subtitle = subtitle
-        self.iconSystemName = iconSystemName
+    let manifest = ModuleManifest(
+        schemaVersion: ModuleManifest.supportedSchemaVersion,
+        moduleID: "com.jamftool.modules.computer-search",
+        displayName: "Computer Search",
+        moduleVersion: SemVer(major: 1, minor: 0, patch: 0),
+        moduleType: .ui,
+        supportedPlatforms: [.iOS, .macOS],
+        minForsettiVersion: SemVer(major: 0, minor: 1, patch: 0),
+        capabilitiesRequested: [.networking, .secureStorage, .viewInjection],
+        entryPoint: "ComputerSearchModule"
+    )
+
+    let uiContributions = UIContributions(
+        viewInjections: [
+            ViewInjectionDescriptor(
+                injectionID: "computer-search-root",
+                slot: "module.workspace",
+                viewID: "computer-search-root-view",
+                priority: 100
+            )
+        ]
+    )
+
+    let subtitle = "Search computer inventory and create reusable field-based profiles."
+    let iconSystemName = "desktopcomputer"
+
+    private var isStarted = false
+
+    init() {}
+
+    func start(context: ForsettiContext) throws {
+        guard !isStarted else { return }
+        isStarted = true
+        context.moduleLogger(moduleID: descriptor.moduleID).info("ComputerSearchModule started")
     }
 
-    /// Handles makeRootView.
-    func makeRootView(context: ModuleContext) -> AnyView {
-        let viewModel = ComputerSearchViewModel(
-            apiGateway: context.apiGateway,
-            diagnosticsReporter: context.diagnosticsReporter,
-            profileStore: ComputerSearchProfileStore()
-        )
-
-        return AnyView(ComputerSearchView(viewModel: viewModel))
+    func stop(context: ForsettiContext) {
+        guard isStarted else { return }
+        isStarted = false
+        context.moduleLogger(moduleID: descriptor.moduleID).info("ComputerSearchModule stopped")
     }
 }
-
-//endofline

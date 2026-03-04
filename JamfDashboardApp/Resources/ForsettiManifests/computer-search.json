@@ -1,0 +1,21 @@
+{
+    "schemaVersion": "1.0",
+    "moduleID": "com.jamftool.modules.computer-search",
+    "displayName": "Computer Search",
+    "moduleVersion": {
+        "major": 1,
+        "minor": 0,
+        "patch": 0
+    },
+    "moduleType": "ui",
+    "supportedPlatforms": ["iOS", "macOS"],
+    "minForsettiVersion": {
+        "major": 0,
+        "minor": 1,
+        "patch": 0
+    },
+    "maxForsettiVersion": null,
+    "capabilitiesRequested": ["networking", "secure_storage", "view_injection"],
+    "iapProductID": null,
+    "entryPoint": "ComputerSearchModule"
+}

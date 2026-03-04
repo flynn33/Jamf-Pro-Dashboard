@@ -1,18 +1,29 @@
+// MARK: - Forsetti Compliance
+// App entry point for the Forsetti-based Jamf Dashboard.
+// Uses JamfDashboardBootstrap to initialize the ForsettiRuntime and ForsettiHostController,
+// then renders the branded JamfDashboardHostView as the root scene.
+// Follows Forsetti Pattern D: dashboard host with multiple independently-activated UI modules.
+
 import SwiftUI
+import ForsettiHostTemplate
 
 @main
-/// JamfDashboardApp declaration.
 struct JamfDashboardApp: App {
-    @StateObject private var container = JamfFrameworkContainer()
+    @StateObject private var bootstrap = JamfDashboardBootstrap()
 
     var body: some Scene {
         WindowGroup {
-            DashboardView(container: container)
-                .tint(BrandColors.bluePrimary)
-                .appRoundedTypography()
-                .appBackground()
+            JamfDashboardHostView(
+                controller: bootstrap.controller,
+                injectionRegistry: bootstrap.injectionRegistry,
+                credentialsStore: bootstrap.credentialsStore,
+                diagnosticsCenter: bootstrap.diagnosticsCenter
+            )
+            .tint(BrandColors.bluePrimary)
+            .appRoundedTypography()
+            .appBackground()
 #if os(macOS)
-                .frame(minWidth: 1200, minHeight: 820)
+            .frame(minWidth: 1200, minHeight: 820)
 #endif
         }
 #if os(macOS)
@@ -20,5 +31,3 @@ struct JamfDashboardApp: App {
 #endif
     }
 }
-
-//endofline

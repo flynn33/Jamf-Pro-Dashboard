@@ -1,6 +1,6 @@
 # Jamf Dashboard
 
-Jamf Dashboard is a modular SwiftUI support application for Jamf Pro operations across **iOS and macOS**.
+Jamf Dashboard is a modular SwiftUI support application for Jamf Pro operations across **iOS and macOS**. Built on the **Forsetti Framework** for sealed modular runtime composition, manifest-based module discovery, and protocol-first dependency injection.
 
 Current release: `3` (`CURRENT_PROJECT_VERSION = 3`, `MARKETING_VERSION = 3`)
 
@@ -21,6 +21,7 @@ This project is distributed in two ways:
 ## Requirements for building
 
 - Xcode 26+
+- Forsetti Framework (local SPM dependency)
 - Deployment targets:
   - iOS 26.0+
   - macOS 14.0+
@@ -43,12 +44,15 @@ Configured in:
 
 ## Architecture Overview
 
-- `JamfFrameworkContainer` bootstraps shared services and module loading.
-- `JamfAPIGateway` centralizes Jamf Pro requests for all modules.
+Built on the Forsetti Framework, the application uses sealed modular runtime composition:
+
+- `JamfDashboardBootstrap` initializes `ForsettiRuntime`, registers services in `ForsettiServiceContainer`, registers module factories in `ModuleRegistry`, and creates `ForsettiHostController`.
+- `JamfAPIGateway` centralizes Jamf Pro requests for all modules, conforming to `JamfAPIGatewayProviding` for protocol-based resolution.
 - `JamfAuthenticationService` manages token issuance, caching, and refresh.
-- `JamfCredentialsStore` persists verified credentials in Keychain.
-- `DiagnosticsCenter` handles diagnostics reporting/export.
-- `ModuleRegistry` and `ModulePackageManager` control module availability.
+- `JamfCredentialsStore` persists verified credentials in Keychain, conforming to `JamfCredentialsProviding`.
+- `DiagnosticsCenter` handles diagnostics reporting/export, bridged to Forsetti via `JamfForsettiLogger`.
+- `ForsettiHostController` manages module lifecycle, activation state, and UI selection.
+- Modules are discovered via `ForsettiManifests/*.json` and instantiated by registered factories in `ModuleRegistry`.
 
 ## Built-In Modules
 
@@ -76,45 +80,45 @@ Configured in:
   - View pre-stage enrollment profiles and scoped devices
   - Multi-select remove/move workflows with progress and rollback handling
 
+## Module Discovery
+
+Modules are declared via Forsetti manifest JSON files in `JamfDashboardApp/Resources/ForsettiManifests/`. Each manifest declares the module identity, capabilities, supported platforms, and entry point class name. The Forsetti runtime discovers these manifests at boot and activates modules through registered factories.
+
+Manifest example:
+
+```json
+{
+  "schemaVersion": "1.0",
+  "moduleID": "com.jamftool.modules.computer-search",
+  "displayName": "Computer Search",
+  "moduleVersion": "1.0.0",
+  "moduleType": "ui",
+  "supportedPlatforms": ["iOS", "macOS"],
+  "minForsettiVersion": "0.1.0",
+  "capabilitiesRequested": ["networking", "secureStorage", "viewInjection"],
+  "entryPoint": "ComputerSearchModule"
+}
+```
+
 ## Navigation and UX Notes
 
 - Standardized top-left back behavior is provided via shared back-button toolbar support.
 - Settings includes a top-left Home button for quick return to dashboard.
 
-## Module Packages
-
-- Module packages are JSON manifests.
-- Install/remove is available in `Settings -> Module Packages`.
-- Bundled default modules are protected and re-applied during bootstrap.
-- Examples are in `ModulePackageTemplates/`.
-
-Minimum manifest shape:
-
-```json
-{
-  "package_id": "com.jamftool.modules.example",
-  "module_type": "computer-search",
-  "package_version": "1.0.0",
-  "module_display_name": "Example Module",
-  "module_subtitle": "Example subtitle",
-  "icon_system_name": "square.grid.2x2"
-}
-```
-
 ## Run the App
 
 1. Open `Jamf Dashboard.xcodeproj`.
-2. Select a destination (iOS simulator/device or macOS "My Mac").
-3. Build and run.
-4. Open `Settings -> Jamf Credentials`.
-5. Enter server URL and authentication credentials.
-6. Verify connection, then save credentials.
-7. Return to the dashboard and open a module.
+2. Ensure Forsetti Framework is resolved as a local SPM dependency.
+3. Select a destination (iOS simulator/device or macOS "My Mac").
+4. Build and run.
+5. Open `Settings -> Jamf Credentials`.
+6. Enter server URL and authentication credentials.
+7. Verify connection, then save credentials.
+8. Return to the dashboard and open a module.
 
 ## Local Data and Logs
 
 - Credentials: Keychain (`com.jamfdashboard.app` service)
-- Module packages: `Application Support/JamfDashboard/installed-module-packages.json`
 - Search profiles:
   - `Application Support/JamfDashboard/computer-search-profiles.json`
   - `Application Support/JamfDashboard/mobile-device-search-profiles.json`
@@ -124,4 +128,4 @@ Minimum manifest shape:
 ## Guides
 
 - Local guide: `WIKI.md`
-- Module reference notes: `JamfDashboardApp/Modules/SupportTechnician/SupportTechnicianModernAPIResearch.md`
+- Wiki pages: `docs/wiki/`

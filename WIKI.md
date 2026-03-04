@@ -1,6 +1,6 @@
 # Jamf Dashboard Wiki
 
-Jamf Dashboard is a modular SwiftUI Jamf Pro operations app for **iOS and macOS**.
+Jamf Dashboard is a modular SwiftUI Jamf Pro operations app for **iOS and macOS**. Built on the **Forsetti Framework** for sealed modular runtime composition, manifest-based module discovery, entitlement governance, and protocol-first dependency injection.
 
 **Attribution:** developed by Jim Daley
 
@@ -17,11 +17,11 @@ Jamf Dashboard is a modular SwiftUI Jamf Pro operations app for **iOS and macOS*
 
 - `CURRENT_PROJECT_VERSION = 3`
 - `MARKETING_VERSION = 3`
-- Legacy baseline used for change tracking: `Dashboard-V1.4`
 
 ## 2. Technical Requirements
 
 - Xcode 26+
+- Forsetti Framework (local SPM dependency)
 - iOS deployment target: 26.0+
 - macOS deployment target: 14.0+
 - Jamf Pro URL
@@ -44,47 +44,46 @@ Locations:
 ## 4. Repository Structure
 
 - `JamfDashboardApp/App`
-  - App entry and framework container wiring
-- `JamfDashboardApp/Framework/Core`
-  - shared contracts, credentials model, framework errors
-- `JamfDashboardApp/Framework/Networking`
-  - authentication and API gateway
-- `JamfDashboardApp/Framework/Security`
-  - Keychain-backed secure data store
-- `JamfDashboardApp/Framework/Diagnostics`
-  - event reporting, export, persistent error logging
-- `JamfDashboardApp/Framework/Modules`
-  - module manifests, package manager, package persistence
-- `JamfDashboardApp/Framework/UI`
-  - dashboard, settings, diagnostics, server credential flows
-- `JamfDashboardApp/Framework/Scanning`
-  - shared scanner sheet and scan-to-text-field support
+  - App entry point and Forsetti bootstrap wiring
+- `JamfDashboardApp/Services`
+  - API gateway, authentication, credentials store, Forsetti logger bridge, Keychain store
+- `JamfDashboardApp/Services/Protocols`
+  - Protocol definitions for ForsettiServiceContainer registration
+- `JamfDashboardApp/Diagnostics`
+  - Event reporting, export, persistent error logging
+- `JamfDashboardApp/Models`
+  - Shared data models (credentials, framework errors)
+- `JamfDashboardApp/DesignSystem`
+  - Brand colors, theme, typography, button styles, platform compatibility
+- `JamfDashboardApp/HostUI`
+  - Branded dashboard host view, settings, credentials, diagnostics, about views
+- `JamfDashboardApp/HostUI/Scanning`
+  - Shared scanner sheet and scan-to-text-field support
 - `JamfDashboardApp/Modules`
   - `ComputerSearch`
   - `MobileDeviceSearch`
   - `SupportTechnician`
   - `PrestageDirector`
-- `ModulePackageTemplates`
-  - example module package manifests
+- `JamfDashboardApp/Resources/ForsettiManifests`
+  - Module manifest JSON files for Forsetti discovery
 - `docs/wiki`
-  - comprehensive wiki pages
+  - Comprehensive wiki pages
 
-## 5. Core Framework Services
+## 5. Core Architecture (Forsetti Framework)
 
-### `JamfFrameworkContainer`
+### `JamfDashboardBootstrap`
 
-Owns shared services:
+Initializes the Forsetti runtime and wires all application services:
 
-- credentials store
-- authentication service
-- API gateway
-- diagnostics center
-- module registry
-- module package manager
+1. Creates `ForsettiRuntime` with manifest discovery from `ForsettiManifests/` bundle directory
+2. Registers domain services in `ForsettiServiceContainer` (API gateway, credentials, diagnostics)
+3. Registers module factories in `ModuleRegistry` mapping entryPoint strings to constructors
+4. Creates `ForsettiHostController` for module lifecycle management
+5. Registers view injections in `ForsettiViewInjectionRegistry` for slot-based UI rendering
 
 ### `JamfAPIGateway`
 
-Shared request layer used by all modules.
+Shared request layer conforming to `JamfAPIGatewayProviding`:
 
 - Builds authenticated requests
 - Retrieves tokens through `JamfAuthenticationService`
@@ -94,60 +93,47 @@ Shared request layer used by all modules.
 
 ### `JamfAuthenticationService`
 
-Authentication/token actor.
+Authentication/token actor:
 
 - Supports API client and username/password flows
 - Caches token and expiration
 - Invalidates token when credential signature changes
-- Reports token/decode failures to diagnostics
 
 ### `JamfCredentialsStore`
 
-Secure credential persistence using Keychain.
+Secure credential persistence conforming to `JamfCredentialsProviding`:
 
-- Save/load/clear operations
+- Save/load/clear operations via Keychain
 - Tracks `hasStoredCredentials`
 
 ### `DiagnosticsCenter`
 
-Structured diagnostics service.
+Structured diagnostics service:
 
 - In-memory event stream (bounded)
 - Persistent NDJSON error log
 - JSON export support
 - Full clear/reset support
+- Bridged to Forsetti runtime logging via `JamfForsettiLogger`
 
-## 6. Module System
+## 6. Module System (Forsetti)
 
-All modules implement `JamfModule` with:
+All modules conform to `ForsettiUIModule` with:
 
-- `id`
-- `title`
-- `subtitle`
-- `iconSystemName`
-- `makeRootView(context:)`
+- `descriptor` — identity and version via `ModuleDescriptor`
+- `manifest` — capabilities, platforms, and entry point via `ModuleManifest`
+- `uiContributions` — view injection descriptors for slot-based UI rendering
+- `start(context:)` / `stop(context:)` — lifecycle methods receiving `ForsettiContext`
 
-`ModuleContext` injects:
+Modules receive services through `ForsettiContext`:
 
-- API gateway
-- credentials store
-- diagnostics reporter
+- `context.services.resolve(JamfAPIGatewayProviding.self)`
+- `context.services.resolve(JamfCredentialsProviding.self)`
+- `context.services.resolve(DiagnosticsReporting.self)`
 
-### Module Package Management
+### Module Discovery
 
-`ModulePackageManager` provides:
-
-- bootstrap of bundled defaults
-- install/remove package manifests
-- persisted package tracking
-- duplicate package protection
-
-Default bundled module types:
-
-- `computer-search`
-- `mobile-device-search`
-- `support-technician`
-- `prestage-director`
+Modules are declared via manifest JSON files in `JamfDashboardApp/Resources/ForsettiManifests/`. The Forsetti runtime discovers these at boot, reconciles entitlements, and activates modules through registered factories.
 
 ## 7. Credentials Workflow
 
@@ -183,11 +169,6 @@ Only selected auth-method fields are stored.
 - Sensitive command confirmations
 - Destructive remove-device command requires typed `Remove`
 - Applications moved to dedicated **Manage Applications** view
-- App actions supported:
-  - Install
-  - Update
-  - Reinstall
-  - Remove
 
 ### Prestage Director
 
@@ -215,34 +196,26 @@ Only selected auth-method fields are stored.
   - service `com.jamfdashboard.app`
   - key `jamf.credentials`
 - Application Support:
-  - `JamfDashboard/installed-module-packages.json`
   - `JamfDashboard/computer-search-profiles.json`
   - `JamfDashboard/mobile-device-search-profiles.json`
 - Documents:
   - `JamfDashboardDiagnostics/jamf-dashboard-diagnostics-<timestamp>.json`
   - `JamfDashboardDiagnostics/jamf-dashboard-errors.ndjson`
 
-## 12. Module Package Manifest Reference
+## 12. Forsetti Manifest Reference
 
-Minimum fields:
+Module manifests are JSON files in `JamfDashboardApp/Resources/ForsettiManifests/`.
 
 ```json
 {
-  "package_id": "com.jamftool.modules.example",
-  "module_type": "computer-search",
-  "package_version": "1.0.0"
+  "schemaVersion": "1.0",
+  "moduleID": "com.jamftool.modules.example",
+  "displayName": "Example Module",
+  "moduleVersion": "1.0.0",
+  "moduleType": "ui",
+  "supportedPlatforms": ["iOS", "macOS"],
+  "minForsettiVersion": "0.1.0",
+  "capabilitiesRequested": ["networking", "secureStorage", "viewInjection"],
+  "entryPoint": "ExampleModule"
 }
 ```
-
-Optional fields:
-
-- `module_display_name`
-- `module_subtitle`
-- `icon_system_name`
-
-Supported module types:
-
-- `computer-search`
-- `mobile-device-search`
-- `support-technician`
-- `prestage-director`

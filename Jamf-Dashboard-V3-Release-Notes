@@ -1,14 +1,15 @@
 # Jamf Dashboard v3 Release Notes
 
-Jamf Dashboard is a modular SwiftUI support application for Jamf Pro operations across iOS and macOS.
+Jamf Dashboard is a modular SwiftUI support application for Jamf Pro operations across iOS and macOS. Built on the Forsetti Framework for sealed modular runtime composition, manifest-based module discovery, and protocol-first dependency injection.
 
 ## Highlights
-- Modular, multi platform SwiftUI app (iOS and macOS) with shared core services
-- Centralized Jamf networking through a single `JamfAPIGateway`
+- Modular, multi platform SwiftUI app (iOS and macOS) built on Forsetti Framework
+- Centralized Jamf networking through a single `JamfAPIGateway` conforming to `JamfAPIGatewayProviding`
 - Token issuance, caching, and refresh handled by `JamfAuthenticationService`
-- Verified credentials stored securely in Keychain
-- Built in Diagnostics Center with export support and persistent NDJSON error logging
-- Module packages supported via JSON manifests with install and remove in Settings
+- Verified credentials stored securely in Keychain via `JamfCredentialsProviding`
+- Built in Diagnostics Center with export support, persistent NDJSON error logging, and Forsetti logger bridge
+- Modules discovered via Forsetti manifest JSON files with ForsettiUIModule lifecycle compliance
+- Protocol-first dependency injection through ForsettiServiceContainer
 
 ## Built in modules
 
@@ -37,7 +38,6 @@ Supports Jamf Pro authentication using either:
 
 ## Local data and logs
 - Credentials stored in Keychain under service `com.jamfdashboard.app`
-- Installed module packages stored in Application Support as `installed-module-packages.json`
 - Search profiles stored in Application Support as:
   - `computer-search-profiles.json`
   - `mobile-device-search-profiles.json`
@@ -51,16 +51,18 @@ The macOS target is configured for:
 
 ## Requirements
 - Xcode 26+
+- Forsetti Framework (local SPM dependency)
 - Deployment targets: iOS 26.0+ and macOS 14.0+
 - A reachable Jamf Pro server URL
 
 ## How to run from source
 1. Open `Jamf Dashboard.xcodeproj`
-2. Choose a destination (iOS simulator or device, or macOS My Mac)
-3. Build and run
-4. Go to Settings then Jamf Credentials
-5. Enter server URL and credentials, verify, then save
-6. Return to the dashboard and open a module
+2. Ensure Forsetti Framework is resolved as a local SPM dependency
+3. Choose a destination (iOS simulator or device, or macOS My Mac)
+4. Build and run
+5. Go to Settings then Jamf Credentials
+6. Enter server URL and credentials, verify, then save
+7. Return to the dashboard and open a module
 
 ## Known gaps for this release
 - This release is distributed as source for Xcode build and run. Packaged signed dmg and pkg builds are planned for future releases.
@@ -68,4 +70,4 @@ The macOS target is configured for:
 
 ## Documentation
 - `WIKI.md` contains the local guide
-- `SupportTechnicianModernAPIResearch.md` contains reference notes for the Support Technician module
+- `docs/wiki/` contains comprehensive wiki pages
